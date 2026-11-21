@@ -1,0 +1,107 @@
+#include <iostream>
+#include <stdexcept>
+using namespace std;
+
+class ClaimError : public runtime_error {
+public:
+    using runtime_error::runtime_error;
+};
+
+double approve(double billed, double cover) {
+    if (billed < 0 || cover < 0)
+        throw invalid_argument("negative amount");
+
+    if (billed > cover)
+        throw ClaimError("exceeds cover");
+
+    return billed;
+}
+
+double settle(double billed, double cover) {
+    try {
+        return approve(billed, cover);
+    }
+    catch (const ClaimError& e) {
+        cout << "audit: " << e.what() << endl;
+        throw;
+    }
+}
+
+int main() {
+    double cases[][2] = {
+        {40000, 50000},
+        {60000, 50000},
+        {-1, 50000}
+    };
+
+    for (auto& c : cases) {
+        try {
+            double paid = settle(c[0], c[1]);
+            cout << "approved " << paid << endl;
+        }
+        catch (const ClaimError& e) {
+            cout << "claim rejected: " << e.what() << endl;
+        }
+        catch (const exception& e) {
+            cout << "error: " << e.what() << endl;
+        }
+    }
+
+    return 0;
+}
+NO LEAKS ERROR
+#include <iostream>
+#include <string>
+using namespace std;
+
+struct Guard {
+    string n;
+
+    explicit Guard(const string& s) : n(s) {}
+
+    ~Guard() {
+        cout << '~' << n << ' ';
+    }
+};
+
+void f() {
+    Guard g("f");
+    throw 42;
+}
+
+int main() {
+    try {
+        Guard m("main");
+
+        f();
+
+        cout << "not printed ";
+    }
+    catch (int x) {
+        cout << "caught " << x;
+    }
+    catch (...) {
+        cout << "other";
+    }
+
+    cout << '\n';
+}
+ALTERNATIVE CONCEPT
+#include <iostream>
+using namespace std;
+
+int main() {
+    int* p = new int(100);
+
+    try {
+        cout << "Value: " << *p << endl;
+        throw 10;
+    }
+    catch (int x) {
+        cout << "Exception caught: " << x << endl;
+        delete p;
+    }
+
+    return 0;
+}
+}
